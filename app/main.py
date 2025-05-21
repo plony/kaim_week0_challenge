@@ -1,40 +1,39 @@
+# app/main.py
+
 import streamlit as st
-import matplotlib.pyplot as plt
-import os
 import pandas as pd
-import utils  # Make sure utils.py exists in the same folder
+import matplotlib.pyplot as plt
+import seaborn as sns
+from utils import load_data, plot_boxplot, plot_time_series, plot_wind_rose, get_summary_table
 
-# Set page config
+# Page config
 st.set_page_config(page_title="Solar Energy Dashboard", layout="wide")
-
-# Load CSS for styling (comment out if not needed)
-# def local_css(file_name):
-#     with open(file_name) as f:
-#         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-
-# local_css("style.css")  # Optional - comment/uncomment as needed
 
 # Load data
 @st.cache_data
-def load_data():
-    benin, sierra, togo = utils.load_data()
-    all_data = pd.concat([benin, sierra, togo], ignore_index=True)
-    return benin, sierra, togo, all_data
+def load_datasets():
+    return load_data()
 
 try:
-    benin_df, sl_df, togo_df, full_df = load_data()
-except Exception as e:
-    st.error("Error loading data. Make sure the clean CSV files exist in the data/ folder.")
+    df_benin, df_sierra_leone, df_togo, full_df = load_datasets()
+except FileNotFoundError as e:
+    st.error(str(e))
     st.stop()
 
 # Sidebar
 st.sidebar.title("🌍 Select Region")
 countries = ['Benin', 'Sierra Leone', 'Togo']
-selected_countries = st.sidebar.multiselect("Choose Countries", options=countries, default=countries)
+selected_countries = st.sidebar.multiselect(
+    "Choose Countries",
+    options=countries,
+    default=countries
+)
 
 st.sidebar.subheader("🔍 Visualizations")
-viz_type = st.sidebar.radio("Select Visualization Type", 
-                            options=["Boxplot", "Time Series", "Wind Rose", "Bubble Chart"])
+viz_type = st.sidebar.radio(
+    "Select Visualization Type",
+    options=["Boxplot", "Time Series", "Wind Rose", "Bubble Chart"]
+)
 
 # Header
 st.title("☀️ Solar Energy Dashboard for West Africa")
@@ -47,8 +46,26 @@ This dashboard provides insights into solar irradiance and weather patterns acro
 Use the sidebar to filter regions and select visualizations.
 """)
 
-# Show summary table
+# Show Summary Table
 if st.checkbox("Show Summary Table"):
     st.subheader("📊 Summary Statistics")
-    summary = utils.get_summary_table(full_df, selected_countries)
+    summary = get_summary_table(full_df)
     st.dataframe(summary)
+
+# Plot based on user input
+st.subheader(f"📈 {viz_type} of Solar Data")
+
+if viz_type == "Boxplot":
+    fig = plot_boxplot(full_df, selected_countries)
+elif viz_type == "Time Series":
+    fig = plot_time_series(full_df, selected_countries)
+elif viz_type == "Wind Rose":
+    fig = plot_wind_rose(full_df, selected_countries)
+elif viz_type == "Bubble Chart":
+    fig = plot_bubble_chart(full_df, selected_countries)
+
+st.pyplot(fig)
+
+# Footer
+st.markdown("---")
+st.markdown("📊 Powered by MoonLight Energy Solutions | 🌍 Built with Streamlit")
